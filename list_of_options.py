@@ -22,7 +22,8 @@ LIGHT_GRAY = (220, 220, 220)
 # Set up fonts
 pygame.font.init()
 font = pygame.font.SysFont('Arial', 48)
-description_font = pygame.font.SysFont('Arial', 120)
+description_font = pygame.font.SysFont('Arial', 60)
+help_font = pygame.font.SysFont('Arial', 72)  # Increased font size
 
 # Define the options
 options = ["option 1", "option 2", "option 3"]
@@ -33,11 +34,9 @@ dropdown_open = False
 center_x = screen_width // 2
 center_y = screen_height // 2
 
-
 # Define the dimensions and positions for the text and dropdown menu
 question_text = font.render("list of options", True, BLACK)
 question_text_rect = question_text.get_rect(center=(center_x, center_y - 100))
-
 
 dropdown_width = 400
 dropdown_height = 60
@@ -54,6 +53,10 @@ exit_button_rect = pygame.Rect(center_x - dropdown_width // 2, center_y + 100, d
 resume_button_rect = pygame.Rect(center_x - dropdown_width // 2, center_y, dropdown_width, dropdown_height)
 pause_exit_button_rect = pygame.Rect(center_x - dropdown_width // 2, center_y + 100, dropdown_width, dropdown_height)
 
+# Define the help button
+help_button_rect = pygame.Rect(screen_width - 200, 20, 180, 60)
+help_text = font.render("help", True, BLACK)
+help_text_rect = help_text.get_rect(center=help_button_rect.center)
 
 # Function to display the description text
 def display_description(text):
@@ -63,7 +66,6 @@ def display_description(text):
     screen.blit(description_text, description_text_rect)
     pygame.display.flip()
     time.sleep(4)
-
 
 # Function to display the main menu
 def display_main_menu():
@@ -80,7 +82,6 @@ def display_main_menu():
 
     pygame.display.flip()
 
-
 # Function to display the pause menu
 def display_pause_menu():
     screen.fill(WHITE)
@@ -96,11 +97,65 @@ def display_pause_menu():
 
     pygame.display.flip()
 
+# Function to render wrapped text
+def render_text_wrapped(text, font, color, max_width):
+    words = text.split(' ')
+    lines = []
+    current_line = []
+    current_width = 0
+    space_width, space_height = font.size(' ')
 
+    for word in words:
+        word_surface = font.render(word, True, color)
+        word_width, word_height = word_surface.get_size()
+        if current_width + word_width >= max_width:
+            lines.append(current_line)
+            current_line = [word]
+            current_width = word_width
+        else:
+            current_line.append(word)
+            current_width += word_width + space_width
+
+    lines.append(current_line)
+    surfaces = []
+
+    for line in lines:
+        line_surface = font.render(' '.join(line), True, color)
+        surfaces.append(line_surface)
+
+    return surfaces
+
+# Function to display the help text
+def display_help_text():
+    with open("lorem_ipsum_help.txt", "r") as file:
+        help_text = file.read()
+
+    screen.fill(WHITE)
+    max_width = screen_width - 100
+    max_height = screen_height - 100
+
+    paragraphs = help_text.split('\n')
+    line_surfaces = []
+    for paragraph in paragraphs:
+        line_surfaces.extend(render_text_wrapped(paragraph, help_font, BLACK, max_width))
+        line_surfaces.append(None)  # Add a blank line between paragraphs
+
+    total_text_height = sum(line.get_height() if line else help_font.get_height() for line in line_surfaces)
+    y_offset = (screen_height - total_text_height) // 2
+
+    for line_surface in line_surfaces:
+        if line_surface:
+            text_rect = line_surface.get_rect(center=(screen_width // 2, y_offset))
+            screen.blit(line_surface, text_rect)
+            y_offset += line_surface.get_height()
+        else:
+            y_offset += help_font.get_height()  # Space between paragraphs
+
+    pygame.display.flip()
+    time.sleep(10)
 
 # Set up the clock for managing the frame rate
 clock = pygame.time.Clock()
-
 
 # Main loop
 running = True
@@ -138,6 +193,8 @@ while running:
                             # Display the description text for 4 seconds
                             display_description(f"description for {selected_option}")
                             selected_option = None  # Reset the selected option
+                if help_button_rect.collidepoint(event.pos):
+                    display_help_text()
 
     if in_main_menu:
         display_main_menu()
@@ -162,6 +219,10 @@ while running:
                 option_text = font.render(options[i], True, BLACK)
                 option_text_rect = option_text.get_rect(center=rect.center)
                 screen.blit(option_text, option_text_rect)
+
+        # Render the help button
+        pygame.draw.rect(screen, GRAY, help_button_rect)
+        screen.blit(help_text, help_text_rect)
 
     # Update the display
     pygame.display.flip()
